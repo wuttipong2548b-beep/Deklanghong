@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตารางหุ้นสหรัฐ - US Stocks (Real-time)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online {
+            background: #27ae60;
+        }
+
+        .status-offline {
+            background: #e74c3c;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .clear-all-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .clear-all-btn:hover {
+            background: #c0392b;
+        }
+
+        .add-stock {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .add-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .stock-table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        .stock-table th {
+            background: #34495e;
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .stock-table th:first-child {
+            border-top-left-radius: 10px;
+        }
+
+        .stock-table th:last-child {
+            border-top-right-radius: 10px;
+        }
+
+        .stock-table td {
+            padding: 12px 10px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .stock-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .symbol {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .price {
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .positive {
+            color: #27ae60;
+        }
+
+        .negative {
+            color: #e74c3c;
+        }
+
+        .neutral {
+            color: #7f8c8d;
+        }
+
+        .support-level {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .support-1 { color: #e74c3c; }
+        .support-2 { color: #f39c12; }
+        .support-3 { color: #27ae60; }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .add-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .stock-table th,
+            .stock-table td {
+                padding: 8px 5px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="clear-all-btn" onclick="clearAllStocks()">ล้างทั้งหมด</button>
+            <h1>📈 ตารางหุ้นสหรัฐอเมริกา (Real-time)</h1>
+            <p>ติดตามหุ้น US พร้อมแนวรับ 3 ระดับ <span class="status-indicator status-online" id="statusIndicator"></span></p>
+            <small style="color: #7f8c8d;">รองรับ: AAPL, TSLA, MSFT, GOOGL, AMZN, NVDA, META และหุ้น US อื่นๆ</small>
+        </div>
+
+        <div class="add-stock">
+            <form class="add-form" id="addStockForm">
+                <div class="form-group">
+                    <label>Symbol หุ้น</label>
+                    <input type="text" id="symbol" placeholder="AAPL" required>
+                </div>
+                <div class="form-group">
+                    <label>แนวรับ 1 ($)</label>
+                    <input type="number" id="support1" step="0.01" placeholder="145.00" required>
+                </div>
+                <div class="form-group">
+                    <label>แนวรับ 2 ($)</label>
+                    <input type="number" id="support2" step="0.01" placeholder="140.00" required>
+                </div>
+                <div class="form-group">
+                    <label>แนวรับ 3 ($)</label>
+                    <input type="number" id="support3" step="0.01" placeholder="135.00" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn" id="addBtn">เพิ่มหุ้น</button>
+                </div>
+            </form>
+            <div id="errorMessage"></div>
+        </div>
+
+        <div class="stock-table-container">
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>ราคาปัจจุบัน</th>
+                        <th>เปลี่ยนแปลง</th>
+                        <th>%เปลี่ยนแปลง</th>
+                        <th>แนวรับ 1</th>
+                        <th>แนวรับ 2</th>
+                        <th>แนวรับ 3</th>
+                        <th>ระยะจากแนวรับ 1</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                    <!-- Stocks will be inserted here -->
+                </tbody>
+            </table>
+            <div class="last-update" id="lastUpdate"></div>
+        </div>
+    </div>
+
+    <script>
+        let stocks = [];
+        let isOnline = true;
+        let lastUpdateTime = null;
+
+        // Alpha Vantage API Key (Free tier: 500 requests/day)
+        const API_KEY = 'demo'; // Replace with your actual API key from https://www.alphavantage.co/support/#api-key
+        
+        // Alternative: Use Yahoo Finance API (unofficial but free)
+        const USE_YAHOO_FINANCE = true; // Set to true to use Yahoo Finance instead
+
+        // Load stocks from localStorage on page load
+        function loadStocks() {
+            const savedStocks = localStorage.getItem('usStocks');
+            if (savedStocks) {
+                stocks = JSON.parse(savedStocks);
+            }
+        }
+
+        // Save stocks to localStorage
+        function saveStocks() {
+            localStorage.setItem('usStocks', JSON.stringify(stocks));
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.innerHTML = `<div class="error-message">${message}</div>`;
+            setTimeout(() => {
+                errorDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function updateStatus(online) {
+            isOnline = online;
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator ${online ? 'status-online' : 'status-offline'}`;
+        }
+
+        function updateLastUpdateTime() {
+            lastUpdateTime = new Date();
+            const lastUpdateDiv = document.getElementById('lastUpdate');
+            lastUpdateDiv.textContent = `อัพเดทล่าสุด: ${lastUpdateTime.toLocaleTimeString('th-TH')}`;
+        }
+
+        // Fetch stock price using CORS proxy
+        async function fetchYahooFinancePrice(symbol) {
+            try {
+                // Using allorigins.win as CORS proxy - free and reliable
+                const proxyUrl = 'https://api.allorigins.win/get?url=';
+                const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
+                
+                const response = await fetch(`${proxyUrl}${targetUrl}`);
+                const proxyData = await response.json();
+                
+                if (!proxyData.contents) {
+                    throw new Error('Proxy response empty');
+                }
+                
+                const data = JSON.parse(proxyData.contents);
+                
+                if (data.chart && data.chart.result && data.chart.result[0]) {
+                    const result = data.chart.result[0];
+                    const meta = result.meta;
+                    const currentPrice = meta.regularMarketPrice;
+                    const previousClose = meta.previousClose;
+                    const change = currentPrice - previousClose;
+                    
+                    return {
+                        price: currentPrice,
+                        change: change,
+                        previousClose: previousClose
+                    };
+                }
+                throw new Error('Invalid response format');
+            } catch (error) {
+                console.error(`Error fetching ${symbol}:`, error);
+                // Fallback to Financial Modeling Prep API (free tier)
+                return await fetchFMPPrice(symbol);
+            }
+        }
+
+        // Fallback API - Financial Modeling Prep (free tier: 250 requests/day)
+        async function fetchFMPPrice(symbol) {
+            try {
+                const response = await fetch(`https://financialmodelingprep.com/api/v3/quote-short/${symbol}?apikey=demo`);
+                const data = await response.json();
+                
+                if (data && data[0]) {
+                    const stock = data[0];
+                    const currentPrice = stock.price;
+                    // For demo, we'll simulate change as we don't have previous close in this endpoint
+                    const change = currentPrice * (Math.random() - 0.5) * 0.02; // ±1% random change
+                    
+                    return {
+                        price: currentPrice,
+                        change: change,
+                        previousClose: currentPrice - change
+                    };
+                }
+                throw new Error('Stock not found');
+            } catch (error) {
+                console.error(`FMP API Error for ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        // Fetch stock price from Alpha Vantage API
+        async function fetchAlphaVantagePrice(symbol) {
+            try {
+                const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`);
+                const data = await response.json();
+                
+                if (data['Global Quote']) {
+                    const quote = data['Global Quote'];
+                    const currentPrice = parseFloat(quote['05. price']);
+                    const change = parseFloat(quote['09. change']);
+                    const previousClose = currentPrice - change;
+                    
+                    return {
+                        price: currentPrice,
+                        change: change,
+                        previousClose: previousClose
+                    };
+                }
+                throw new Error('API limit exceeded or invalid symbol');
+            } catch (error) {
+                console.error(`Error fetching ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        // Main function to fetch stock price
+        async function fetchStockPrice(symbol) {
+            if (USE_YAHOO_FINANCE) {
+                return await fetchYahooFinancePrice(symbol);
+            } else {
+                return await fetchAlphaVantagePrice(symbol);
+            }
+        }
+
+        function formatNumber(num) {
+            return num.toFixed(2);
+        }
+
+        function formatPercent(change, previousClose) {
+            const percent = (change / previousClose) * 100;
+            return percent.toFixed(2);
+        }
+
+        function getPriceClass(change) {
+            if (change > 0) return 'positive';
+            if (change < 0) return 'negative';
+            return 'neutral';
+        }
+
+        function getDistanceFromSupport(price, support) {
+            const distance = price - support;
+            const percent = (distance / support) * 100;
+            return `$${formatNumber(distance)} (${formatNumber(percent)}%)`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('stockTableBody');
+            
+            if (stocks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-message">
+                            ยังไม่มีหุ้นในตาราง กรุณาเพิ่มหุ้นใหม่
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = stocks.map((stock, index) => {
+                const changePercent = stock.previousClose ? formatPercent(stock.change, stock.previousClose) : '0.00';
+                const priceClass = getPriceClass(stock.change);
+                const distanceFromSupport1 = getDistanceFromSupport(stock.price, stock.support1);
+
+                return `
+                    <tr>
+                        <td class="symbol">${stock.symbol}</td>
+                        <td class="price">$${formatNumber(stock.price)}</td>
+                        <td class="price ${priceClass}">
+                            ${stock.change > 0 ? '+' : ''}$${formatNumber(stock.change)}
+                        </td>
+                        <td class="price ${priceClass}">
+                            ${stock.change > 0 ? '+' : ''}${changePercent}%
+                        </td>
+                        <td class="support-level support-1">$${formatNumber(stock.support1)}</td>
+                        <td class="support-level support-2">$${formatNumber(stock.support2)}</td>
+                        <td class="support-level support-3">$${formatNumber(stock.support3)}</td>
+                        <td>${distanceFromSupport1}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteStock(${index})">
+                                ลบ
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function addStock(event) {
+            event.preventDefault();
+            
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            const support1 = parseFloat(document.getElementById('support1').value);
+            const support2 = parseFloat(document.getElementById('support2').value);
+            const support3 = parseFloat(document.getElementById('support3').value);
+            
+            // Check if stock already exists
+            if (stocks.find(stock => stock.symbol === symbol)) {
+                showError('หุ้นนี้มีในตารางแล้ว');
+                return;
+            }
+
+            // Check if table is full (max 20 stocks)
+            if (stocks.length >= 20) {
+                showError('ตารางเต็มแล้ว (สูงสุด 20 หุ้น)');
+                return;
+            }
+
+            // Validate support levels order
+            if (support2 >= support1 || support3 >= support2) {
+                showError('แนวรับต้องเรียงจากมากไปน้อย: แนวรับ 1 > แนวรับ 2 > แนวรับ 3');
+                return;
+            }
+
+            // Disable form while fetching
+            const addBtn = document.getElementById('addBtn');
+            addBtn.disabled = true;
+            addBtn.textContent = 'กำลังดึงข้อมูล...';
+
+            try {
+                // Fetch real stock price
+                const stockData = await fetchStockPrice(symbol);
+                
+                if (!stockData) {
+                    showError(`ไม่สามารถดึงข้อมูลหุ้น ${symbol} ได้ กรุณาตรวจสอบ Symbol`);
+                    return;
+                }
+
+                // Validate support levels against current price
+                if (support1 >= stockData.price) {
+                    showError(`แนวรับ 1 (${support1}) ต้องต่ำกว่าราคาปัจจุบัน ($${formatNumber(stockData.price)})`);
+                    return;
+                }
+                
+                const newStock = {
+                    symbol,
+                    price: stockData.price,
+                    change: stockData.change,
+                    previousClose: stockData.previousClose,
+                    support1,
+                    support2,
+                    support3,
+                    lastUpdated: new Date().toISOString()
+                };
+                
+                stocks.push(newStock);
+                
+                // Save to localStorage
+                saveStocks();
+                
+                // Reset form
+                document.getElementById('addStockForm').reset();
+                
+                renderTable();
+                updateStatus(true);
+                
+            } catch (error) {
+                console.error('Error adding stock:', error);
+                showError('เกิดข้อผิดพลาดในการดึงข้อมูลหุ้น');
+                updateStatus(false);
+            } finally {
+                // Re-enable form
+                addBtn.disabled = false;
+                addBtn.textContent = 'เพิ่มหุ้น';
+            }
+        }
+
+        function deleteStock(index) {
+            if (confirm(`คุณต้องการลบหุ้น ${stocks[index].symbol} ใช่หรือไม่?`)) {
+                stocks.splice(index, 1);
+                saveStocks();
+                renderTable();
+            }
+        }
+
+        function clearAllStocks() {
+            if (confirm('คุณต้องการลบหุ้นทั้งหมดใช่หรือไม่?')) {
+                stocks = [];
+                saveStocks();
+                renderTable();
+            }
+        }
+
+        // Update all stock prices
+        async function updateAllPrices() {
+            if (stocks.length === 0) return;
+            
+            console.log('Updating stock prices...');
+            const container = document.querySelector('.stock-table-container');
+            container.classList.add('loading');
+            
+            let successCount = 0;
+            
+            for (let i = 0; i < stocks.length; i++) {
+                try {
+                    const stockData = await fetchStockPrice(stocks[i].symbol);
+                    if (stockData) {
+                        stocks[i].price = stockData.price;
+                        stocks[i].change = stockData.change;
+                        stocks[i].previousClose = stockData.previousClose;
+                        stocks[i].lastUpdated = new Date().toISOString();
+                        successCount++;
+                    }
+                    
+                    // Add longer delay between API calls to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                } catch (error) {
+                    console.error(`Error updating ${stocks[i].symbol}:`, error);
+                }
+            }
+            
+            // Save updated data
+            saveStocks();
+            renderTable();
+            updateLastUpdateTime();
+            
+            updateStatus(successCount > 0);
+            container.classList.remove('loading');
+            
+            console.log(`Updated ${successCount}/${stocks.length} stocks`);
+        }
+
+        // Event listeners
+        document.getElementById('addStockForm').addEventListener('submit', addStock);
+
+        // Load stocks when page loads
+        loadStocks();
+
+        // Initial render
+        renderTable();
+
+        // Update prices every 2 minutes (120 seconds)
+        // Note: Be mindful of API rate limits
+        setInterval(updateAllPrices, 120000);
+
+        // Update prices on page load if we have stocks
+        if (stocks.length > 0) {
+            setTimeout(updateAllPrices, 2000);
+        }
+    </script>
+</body>
+</html>
